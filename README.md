@@ -47,7 +47,7 @@ The weight corresponding to UAVDT is obtained from this [link](https://drive.goo
 
    After training, three model weights will be generated.
 ## Tracking
-1. Download the full code of **U2MOT**, and move `Track/track_cluster.py` to the `tools` directory.
+1. Download the full code of [u2mot](https://github.com/alibaba/u2mot), and move `Track/track_cluster.py` to the `tools` directory.
 2. Move all other `.py` files from the `Track` folder to `yolox/tracker`.
 3. Move the `UAVDT` folder to `yolox/tracker/GMC_files`.
 
