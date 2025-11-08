@@ -34,28 +34,41 @@ The weight corresponding to UAVDT is obtained from this [link](https://drive.goo
 |  VisDrone | Released soon |
 |   UAVDT   | Released soon |
 
-## Code
-**All codes related to training, testing, and evaluation will be released soon.**
 
 ## Training
-* **Train on VisDrone**
-```
-python Tracker_train/step_mamba_tracker.py <DataPath>/VisDrone2019-MOT-train/annotations --step 1 --benchmark VisDrone
-python Tracker_train/step_mamba_tracker.py <DataPath>/VisDrone2019-MOT-train/annotations --step 2 --benchmark VisDrone
-```
-* **Train on UAVDT**
-```
-python Tracker_train/step_mamba_tracker.py <DataPath>/uavdt_train/annotations --step 1 --benchmark UAVDT
-python Tracker_train/step_mamba_tracker.py <DataPath>/uavdt_train/annotations --step 2 --benchmark UAVDT
-```
+
+1. Use any ReID model to extract features on the training set, and save the feature maps to the path `<npy_path>`.
+2. Modify the paths at the bottom of the two Python files under the `train_reid` folder, then run:
+
+   ```bash
+   python backdoor_train.py
+   python mediator_train.py
+   ```
+
+   After training, three model weights will be generated.
 ## Tracking
-* **Test on VisDrone**
-```
-python tools/track_VisDrone.py <DataPath>/VisDrone2019-MOT-test-dev/sequences --benchmark VisDrone -f exps/example/CausalMOT/yolox_x_u2mot_uavdt.py -c <VisDrone-Detetcor-Weight> --device 1 --fp16 --fuse --cmc-method file --cmc-file-dir VisDrone/test-dev
-```
-* **Test on UAVDT**
-```
-python tools/track_UAVDT.py <DataPath>/uavdt_test/sequences --benchmark UAVDT -f exps/example/CausalMOT/yolox_x_u2mot_uavdt.py -c <UAVDT-Detetcor-Weight> --device 1 --fp16 --fuse --cmc-method file --cmc-file-dir UAVDT/test-dev
+1. Download the full code of **U2MOT**, and move `Track/track_cluster.py` to the `tools` directory.
+2. Move all other `.py` files from the `Track` folder to `yolox/tracker`.
+3. Move the `UAVDT` folder to `yolox/tracker/GMC_files`.
+
+Then, run the following commands to perform tracking:
+
+```bash
+# Tracking on VisDrone
+python tools/track_cluster.py <VisDrone_testset> \
+    --benchmark VisDrone \
+    -f exps/example/CausalMOT/yolox_x_causalmot_visdrone.py \
+    -c <VisDrone_Pretrain> \
+    --device 0 --fp16 --fuse \
+    --cmc-method file --cmc-file-dir VisDrone/test-dev
+
+# Tracking on UAVDT
+python tools/track_cluster.py <UAVDT_testset> \
+    --benchmark UAVDT \
+    -f exps/example/CausalMOT/yolox_x_causalmot_uavdt.py \
+    -c <UAVDT_Pretrain> \
+    --device 0 --fp16 --fuse \
+    --cmc-method file --cmc-file-dir UAVDT
 ```
 ## Evaluation
 * **Evaluate on VisDrone**
