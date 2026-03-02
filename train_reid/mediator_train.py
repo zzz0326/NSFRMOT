@@ -70,39 +70,44 @@ class CrossAttentionClassifier(nn.Module):
 def compute_loss(track_embs, text_embs, model, k=5, loss_type="bce", n_hard=5, val=False):
     C = text_embs.size(0)
 
-
+    # 1. 计算平均 embedding
     avg_emb = track_embs.mean(dim=0, keepdim=True) # (1, d)
+    # print(avg_emb.shape)
+    # 2. 找到最相似的 k 个类别
     sim = torch.matmul(F.normalize(text_embs, dim=-1), F.normalize(avg_emb, dim=-1).T).squeeze(1)
     topk_indices = torch.topk(sim, k=k).indices  # (k,) → label
-    sim_to_avg = F.cosine_similarity(track_embs, avg_emb)  # (w,)
-    hard_indices = torch.argsort(sim_to_avg)[:n_hard]
-    hard_embs = track_embs[hard_indices]  # (n, d)
+    # print(topk_indices)
 
+    if val:
+        with torch.no_grad():
+            logits = model(track_embs, text_embs)  # (B, C)
+    else:
+        logits = model(track_embs, text_embs)  # (B, C)
 
-    total_loss = 0.
-    for query in hard_embs:
-        if val == True:
-            with torch.no_grad():
-                logits = model(query.unsqueeze(0), text_embs)
-        else:
-            logits = model(query.unsqueeze(0), text_embs)
+    # 构造 soft label（保持你原来的 top-k 权重）
+    label = torch.zeros(C, device=logits.device)
+    label[topk_indices[0]] = 1.0
+    label[topk_indices[1]] = 0.8
+    label[topk_indices[2]] = 0.6
+    label[topk_indices[3]] = 0.4
+    label[topk_indices[4]] = 0.2
 
-        if loss_type == "bce":
-            label = torch.zeros(C, device=logits.device)
-            label[topk_indices[0]] = 1.0
-            label[topk_indices[1]] = 0.8
-            label[topk_indices[2]] = 0.6
-            label[topk_indices[3]] = 0.4
-            label[topk_indices[4]] = 0.2
-            loss = F.binary_cross_entropy_with_logits(logits, label)
-        elif loss_type == "ce":
-            label = topk_indices[0].unsqueeze(0)  # (1,)
-            loss = F.cross_entropy(logits.unsqueeze(0), label)
-        else:
-            raise ValueError("Unsupported loss type: choose 'bce' or 'ce'")
-        total_loss += loss
+    label = label.unsqueeze(0).expand(logits.size(0), -1)  # (B, C)
 
-    return total_loss
+    # ===== 新的 variance-based BCE 替代 =====
+
+    prob = torch.sigmoid(logits)  # (B, C)
+
+    # 只关注正类部分
+    pos_prob = (prob * label).sum(dim=1) / (label.sum() + 1e-6)  # (B,)
+
+    mu = pos_prob.mean()
+    var = ((pos_prob - mu) ** 2).mean()
+
+    loss = -mu + var
+        # total_loss += loss
+
+    return loss
 
 
 
@@ -113,7 +118,8 @@ def train(clip_path, save_path):
     dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
 
 
-    car_list = ['convertible', 'jeep', 'crane', 'minivan', 'plough', 'minbus', 'amphibian', 'forklift', 'dustcart', 'go-kart', 'golfcart', 'mobile home', 'Model T', 'moving van', 'recreational vehicle', 'trailer truck', 'RV', 'school bus', 'tram', 'thresher']
+    car_list = ['black Maria', 'jinrikisha', 'thresher', 'oxcart', 'barrow', 'tandem', 'thrasher', 'grille', 'ricksha', 'monocycle', 'rig', 'hack', 'wrecker', 'bullet', 'radiator grille', 'R.V.', 'beach waggon', 'unicycle', 'pinwheel', 'velocipede']
+
     prompts = [f"a photo of {obj}" for obj in car_list]
     model = open_clip.create_model('ViT-L-14', pretrained=None, device='cuda')
     state_dict = torch.load(clip_path,
