@@ -255,45 +255,71 @@ def compute_loss(embed_0, embed_1, k=16, head=None, classifier=None):
     B, D = embed_0.shape
     bce_loss = torch.nn.BCEWithLogitsLoss()
 
+    # clean embedding
     clean_embed = project_orthogonal(embed_0, embed_1)  # (B, D)
 
-
-    sim_matrix = F.cosine_similarity(embed_1.unsqueeze(1), embed_1.unsqueeze(0), dim=-1)  # (B, B)
-    mask = torch.eye(B, device=embed_0.device).bool()
-    sim_matrix.masked_fill_(mask, float('inf'))  # 避免选择自己
-
-    _, indices = torch.topk(sim_matrix, k=k, largest=False, dim=1)  # 每行找最不相似的K个背景 index
-
+    # ===== 使用整个 batch 作为背景 =====
     all_noisy_embeds = []
+
     for i in range(B):
-        c_i = clean_embed[i].unsqueeze(0)           # (1, D)
-        distractors = embed_1[indices[i]]           # (K, D)
+        c_i = clean_embed[i].unsqueeze(0)       # (1, D)
+        distractors = embed_1                  # (B, D)
 
-
-        noisy_embeds_i = project_orthogonal_add(c_i.repeat(k, 1), distractors)  # (K, D)
+        noisy_embeds_i = project_orthogonal_add(
+            c_i.repeat(B, 1),
+            distractors
+        )  # (B, D)
 
         all_noisy_embeds.append(noisy_embeds_i)
 
-    noisy_embeds = torch.stack(all_noisy_embeds, dim=0)  # (B, K, D)
-    noisy_prd = head(noisy_embeds.view(B * k, D))
+    noisy_embeds = torch.stack(all_noisy_embeds, dim=0)  # (B, B, D)
 
+    noisy_prd = head(noisy_embeds.view(B * B, D))
 
-    loss_noise = cosine_loss(
-        noisy_prd,
-        clean_embed.unsqueeze(1).expand(B, k, D).reshape(B * k, D)
-    )
+    # 对应的 clean target
+    clean_target = clean_embed.unsqueeze(1).expand(B, B, D).reshape(B * B, D)
+
+    # ===== 新的 variance-based noise loss =====
+
+    noisy_prd = F.normalize(noisy_prd, dim=-1)
+    clean_target = F.normalize(clean_target, dim=-1)
+
+    s = (noisy_prd * clean_target).sum(dim=-1)  # (B*B)
+
+    mu = s.mean()
+    # print(mu)
+    var = ((s - mu) ** 2).mean()
+
+    loss_noise = -mu + var
+
+    # ===== 原始对齐 loss =====
 
     org_prd = head(embed_0)
-    loss_raw = cosine_loss(org_prd, clean_embed)  # (B, D) 对 (B, D)
+
+    org_prd = F.normalize(org_prd, dim=-1)
+    clean_embed_norm = F.normalize(clean_embed, dim=-1)
+
+    s_raw = (org_prd * clean_embed_norm).sum(dim=-1)
+
+    mu_raw = s_raw.mean()
+    var_raw = ((s_raw - mu_raw) ** 2).mean()
+
+    loss_raw = -mu_raw + var_raw
+
+    # ===== 分类器约束 =====
 
     noisy_t = classifier(noisy_prd)
     org_t = classifier(org_prd)
-    sun_t = torch.cat((noisy_t,org_t), dim=0)
+
+    sun_t = torch.cat((noisy_t, org_t), dim=0)
     label_cheat = torch.zeros_like(sun_t)
+
     loss_cheat = bce_loss(sun_t, label_cheat)
 
-    loss = loss_noise + 5*loss_raw + loss_cheat
-    # loss.backward()
+    # ===== 总 loss =====
+
+    loss = loss_noise + 5 * loss_raw + loss_cheat
+
     return loss
 
 class EmbeddingHead(nn.Module):
@@ -358,4 +384,5 @@ save_path ='d'
 extract_embedding(img_root=img_root, label_path=label_path, npy_path=npy_path, save_path=save_path)
 train_classifier(save_path+'embeddings.npy', save_path+'u2mot_labels.npy', save_path=save_path)
 train_head_with_noise_add(save_path+'embeddings.npy', save_path+'u2mot_labels.npy', classifier_path=save_path+'backdoor_classifier.pt', save_path=save_path+'/addniose2head.pt')
+
 
