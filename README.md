@@ -41,8 +41,8 @@ The weight corresponding to UAVDT is obtained from this [link](https://drive.goo
 2. Modify the paths at the bottom of the two Python files under the `train_reid` folder, then run:
 
    ```bash
-   python backdoor_train.py
-   python mediator_train.py
+   python BR_train.py
+   python SGR_train.py
    ```
 
    After training, three model weights will be generated.
@@ -73,11 +73,11 @@ python tools/track_cluster.py <UAVDT_testset> \
 ## Evaluation
 * **Evaluate on VisDrone**
 ```
-python tools/utils/eval.py <DataPath>/VisDrone2019-MOT-test-dev/annotations --benchmark VisDrone
+python tools/utils/eval_visdrone.py <DataPath>/VisDrone2019-MOT-test-dev/annotations
 ```
 * **Evaluate on UAVDT**
 ```
-python tools/utils/eval.py <DataPath>/uavdt_test/annotations --benchmark UAVDT
+python tools/utils/eval_uavdt.py <DataPath>/uavdt_test/annotations
 ```
 ## Acknowledgement
 A large part of the code is borrowed from [u2mot](https://github.com/alibaba/u2mot). Many thanks for their wonderful work.
