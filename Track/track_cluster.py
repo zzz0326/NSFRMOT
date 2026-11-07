@@ -633,24 +633,21 @@ def extract_region_feats(reid_feat, outputs, test_size):
 
 def parse_benchmark(predictor, video_path, exp, args):
     flag = True
+
     args.fps = 30
-    args.track_thresh = 0.5
+    args.track_thresh = 0.6
     args.low_thresh = 0.1
+    args.match_thresh = 0.8
     args.track_buffer = 30
-    args.aspect_ratio_thresh = 1e5
-    args.min_box_area = 1
-    args.newhigh = 0.8
-    args.newlow = 0.5
     predictor.test_size = exp.test_size
+
     seq = osp.basename(video_path)
     if args.benchmark == 'VisDrone':
+        args.track_thresh = 0.5  # too many small objects
+        # args.low_thresh = 0.05
         args.track_buffer = 15
-        args.match_thresh = 0.8035
-        if seq == 'uav0000201_00000_v' or seq == 'uav0000297_02761_v' or seq == 'uav0000306_00230_v' or seq == 'uav0000355_00001_v':
-            args.track_buffer = 30
-        if seq == 'uav0000009_03358_v' or seq == 'uav0000073_00600_v' or seq == 'uav0000073_04464_v' or seq == 'uav0000077_00720_v' or seq == 'uav0000119_02301_v' or seq == 'uav0000306_00230_v' or seq == 'uav0000370_00001_v':
-            args.newhigh = 0.7
-            args.newlow = 0.4
+        args.aspect_ratio_thresh = 1e5
+        args.min_box_area = 1
     elif args.benchmark == 'UAVDT':
         args.newhigh = 0.9
 
@@ -702,7 +699,7 @@ if __name__ == "__main__":
     state_dict = torch.load("head.pt")
     new_state_dict = {}
     for key, value in state_dict.items():
-        new_key = key.replace("net.", "")  # 移除 "net." 前缀
+        new_key = key.replace("net.", "")  
         new_state_dict[new_key] = value
     CLIP_Head.net.load_state_dict(new_state_dict)
     CLIP_Head.eval()
