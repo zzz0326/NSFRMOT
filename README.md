@@ -73,7 +73,7 @@ python tools/track_cluster.py <UAVDT_testset> \
 ## Evaluation
 * **Evaluate on VisDrone**
 ```
-python tools/utils/eval_visdrone.py <DataPath>/VisDrone2019-MOT-test-dev/annotations
+python tools/utils/eval.py <DataPath>/VisDrone2019-MOT-test-dev/annotations
 ```
 * **Evaluate on UAVDT**
 ```
