@@ -1,8 +1,8 @@
-# CausalMOT: Learning Causal Invariant Representation for UAV Multi-Object Tracking
+# Nuisance-Suppressed Feature Refinement for UAV Multi-Object Tracking
 
 ## Environment
 ```
-conda create -n CausalMOT python=3.8 -y && conda activate CausalMOT
+conda create -n NSFRMOT python=3.8 -y && conda activate NSFRMOT
 python -m pip install -r requirements.txt
 python setup.py develop
 python -m pip install cython
@@ -57,7 +57,7 @@ Then, run the following commands to perform tracking:
 # Tracking on VisDrone
 python tools/track_cluster.py <VisDrone_testset> \
     --benchmark VisDrone \
-    -f exps/example/CausalMOT/yolox_x_causalmot_visdrone.py \
+    -f exps/example/NSFRMOT/yolox_x_NSFRMOT_visdrone.py \
     -c <VisDrone_Pretrain> \
     --device 0 --fp16 --fuse \
     --cmc-method file --cmc-file-dir VisDrone/test-dev
@@ -65,7 +65,7 @@ python tools/track_cluster.py <VisDrone_testset> \
 # Tracking on UAVDT
 python tools/track_cluster.py <UAVDT_testset> \
     --benchmark UAVDT \
-    -f exps/example/CausalMOT/yolox_x_causalmot_uavdt.py \
+    -f exps/example/NSFRMOT/yolox_x_NSFRMOT_uavdt.py \
     -c <UAVDT_Pretrain> \
     --device 0 --fp16 --fuse \
     --cmc-method file --cmc-file-dir UAVDT
