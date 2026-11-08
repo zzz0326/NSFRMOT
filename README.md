@@ -38,38 +38,49 @@ The weight corresponding to UAVDT is obtained from this [link](https://drive.goo
 ## Training
 
 1. Use any ReID model to extract features on the training set, and save the feature maps to the path `<npy_path>`.
-2. Modify the paths at the bottom of the two Python files under the `train_reid` folder, then run:
+
+2. Select suitable categories and save them in a `.txt` file. Then run the following script to filter the categories:
 
    ```bash
-   python BR_train.py
-   python SGR_train.py
+   python Train/text_test.py
    ```
 
-   After training, three model weights will be generated.
+3. Train the SGR module using the filtered categories:
+
+   ```bash
+   python Train/SGR.py
+   ```
+
+4. Train the BR module:
+
+   ```bash
+   python Train/BR.py
+   ```
+
+After training, three model weight files will be generated.
+
 ## Tracking
-1. Download the full code of [u2mot](https://github.com/alibaba/u2mot), and move `Track/track_cluster.py` to the `tools` directory.
-2. Move all other `.py` files from the `Track` folder to `yolox/tracker`.
-3. Move the `UAVDT` folder to `yolox/tracker/GMC_files`.
+Download the full code of [u2mot](https://github.com/alibaba/u2mot).
+### VisDrone
 
-Then, run the following commands to perform tracking:
+Apply NSFR-MOT directly to the ReID feature maps extracted by your tracker. Refer to the feature processing implementation in `test/track_uavdt.py` for guidance.
 
-```bash
-# Tracking on VisDrone
-python tools/track_cluster.py <VisDrone_testset> \
-    --benchmark VisDrone \
-    -f exps/example/NSFRMOT/yolox_x_NSFRMOT_visdrone.py \
-    -c <VisDrone_Pretrain> \
-    --device 0 --fp16 --fuse \
-    --cmc-method file --cmc-file-dir VisDrone/test-dev
+### UAVDT
 
-# Tracking on UAVDT
-python tools/track_cluster.py <UAVDT_testset> \
-    --benchmark UAVDT \
-    -f exps/example/NSFRMOT/yolox_x_NSFRMOT_uavdt.py \
-    -c <UAVDT_Pretrain> \
-    --device 0 --fp16 --fuse \
-    --cmc-method file --cmc-file-dir UAVDT
-```
+1. Move the `UAVDT` folder to `yolox/tracker/GMC_files`.
+
+2. Run the provided inference script with the UAVDT configuration:
+
+   ```bash
+   python test/track_uavdt.py <UAVDT_testset> \
+       --benchmark UAVDT \
+       -f test/config/NSFRMOT_uavdt.py \
+       -c <UAVDT_Pretrain> \
+       --device 0 --fp16 --fuse \
+       --cmc-method file --cmc-file-dir UAVDT
+   ```
+
+
 ## Evaluation
 * **Evaluate on VisDrone**
 ```
